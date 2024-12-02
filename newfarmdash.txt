@@ -1,0 +1,214 @@
+package application;
+
+import java.net.URL;
+import java.util.ResourceBundle;
+
+import javafx.animation.PathTransition;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.util.Duration;
+
+public class mainController implements Initializable {
+
+    @FXML
+    private AnchorPane bg;
+
+    @FXML
+    private ImageView droneimage;
+
+    @FXML
+    private Button myDelete;
+
+    @FXML
+    private ListView<String> myListView;
+
+    @FXML
+    private Button mySelect;
+
+    @FXML
+    private Button scanFarmButton;
+
+    @FXML
+    private Button stopScanButton;
+
+    @FXML
+    private TextArea myTextArea;
+
+    @FXML
+    private Button startDroneButton;
+
+    @FXML
+    private TreeView<String> treeView;
+
+    @FXML
+    private ComboBox<String> actionComboBox;  // ComboBox for actions
+
+    private PathTransition pathTransition; // Declare at the class level for reuse
+
+    @Override
+    public void initialize(URL arg0, ResourceBundle arg1) {
+        initializeTreeView(); // Set up the TreeView structure
+        initializePathTransition(); // Set up PathTransition for the drone animation
+        initializeComboBox(); // Set up the ComboBox with options
+    }
+
+    private void initializeTreeView() {
+        TreeItem<String> rootItem = new TreeItem<>("Root");
+        rootItem.setExpanded(true);
+
+        TreeItem<String> barnItem = new TreeItem<>("Barn");
+        TreeItem<String> livestockItem = new TreeItem<>("Livestock");
+        livestockItem.getChildren().add(new TreeItem<>("Cow"));
+        barnItem.getChildren().addAll(livestockItem, new TreeItem<>("Milk Storage"));
+        rootItem.getChildren().add(barnItem);
+
+        TreeItem<String> commandCenterItem = new TreeItem<>("Command Center");
+        commandCenterItem.getChildren().add(new TreeItem<>("Drone"));
+        rootItem.getChildren().add(commandCenterItem);
+
+        TreeItem<String> storageBuildingItem = new TreeItem<>("Storage Building");
+        storageBuildingItem.getChildren().addAll(new TreeItem<>("Tractor"), new TreeItem<>("Tiller"));
+        rootItem.getChildren().add(storageBuildingItem);
+
+        rootItem.getChildren().add(new TreeItem<>("Soy Crop"));
+
+        treeView.setRoot(rootItem);
+    }
+
+    private void initializePathTransition() {
+        if (droneimage == null) {
+            System.err.println("Drone image not initialized. Check your FXML file.");
+            return;
+        }
+
+        Path squarePath = new Path();
+        squarePath.getElements().add(new MoveTo(40, 20));
+        squarePath.getElements().add(new LineTo(370, 20));
+        squarePath.getElements().add(new LineTo(370, 450));
+        squarePath.getElements().add(new LineTo(40, 450));
+        squarePath.getElements().add(new LineTo(40, 20));
+
+        pathTransition = new PathTransition();
+        pathTransition.setDuration(Duration.millis(10000));
+        pathTransition.setNode(droneimage);
+        pathTransition.setPath(squarePath);
+        pathTransition.setCycleCount(1);
+        pathTransition.setAutoReverse(false);
+
+        // Add a completion listener to update the message area
+        pathTransition.setOnFinished(event -> {
+            myTextArea.appendText("Farm scanning completed.\n");
+        });
+    }
+
+    private void initializeComboBox() {
+        actionComboBox.getItems().addAll(
+            "Add Item", "Add Container", "Remove Item", "Remove Container", "Visit Item", "Visit Container"
+        );
+    }
+
+    @FXML
+    public void handleScanFarm(ActionEvent actionEvent) {
+        if (pathTransition == null) {
+            myTextArea.appendText("Error: PathTransition is not initialized.\n");
+            return;
+        }
+        pathTransition.play();
+        myTextArea.appendText("Scanning the farm...\n");
+    }
+
+    @FXML
+    public void handleStopScan(ActionEvent actionEvent) {
+        if (pathTransition == null) {
+            myTextArea.appendText("Error: PathTransition is not initialized.\n");
+            return;
+        }
+        pathTransition.stop();
+        myTextArea.appendText("Farm scanning stopped.\n");
+    }
+
+    @FXML
+    public void handleActionSelection(ActionEvent actionEvent) {
+        String selectedAction = actionComboBox.getValue();
+        TreeItem<String> selectedTreeItem = treeView.getSelectionModel().getSelectedItem();
+
+        if (selectedTreeItem == null) {
+            myTextArea.appendText("Please select an item from the tree.\n");
+            return;
+        }
+
+        switch (selectedAction) {
+            case "Add Item":
+                myTextArea.appendText("Adding item to: " + selectedTreeItem.getValue() + "\n");
+                break;
+            case "Add Container":
+                myTextArea.appendText("Adding container to: " + selectedTreeItem.getValue() + "\n");
+                break;
+            case "Remove Item":
+                myTextArea.appendText("Removing item from: " + selectedTreeItem.getValue() + "\n");
+                break;
+            case "Remove Container":
+                myTextArea.appendText("Removing container from: " + selectedTreeItem.getValue() + "\n");
+                break;
+            case "Visit Item":
+                myTextArea.appendText("Visiting item: " + selectedTreeItem.getValue() + "\n");
+                moveDroneToLocation(selectedTreeItem.getValue());
+                break;
+            case "Visit Container":
+                myTextArea.appendText("Visiting container: " + selectedTreeItem.getValue() + "\n");
+                moveDroneToLocation(selectedTreeItem.getValue());
+                break;
+            default:
+                myTextArea.appendText("No action selected.\n");
+                break;
+        }
+    }
+
+    private void moveDroneToLocation(String location) {
+        Path path = new Path();
+        
+        // Define paths for different locations
+        switch (location) {
+            case "Cow":
+                // Set path for Cow location
+                path.getElements().clear(); // Clear any previous path elements
+                path.getElements().add(new MoveTo(40, 20)); // Example coordinates for Cow
+                path.getElements().add(new LineTo(370, 20));
+                path.getElements().add(new LineTo(370, 220));// Cow path
+                break;
+            case "Soy Crop":
+                // Set path for Soy Crop location
+                path.getElements().clear();
+                path.getElements().add(new MoveTo(200, 50)); // Example coordinates for Soy Crop
+                path.getElements().add(new LineTo(200, 150)); // Soy Crop path
+                break;
+            case "Barn":
+                // Set path for Barn location
+                path.getElements().clear();
+                path.getElements().add(new MoveTo(300, 300)); // Example coordinates for Barn
+                path.getElements().add(new LineTo(300, 400)); // Barn path
+                break;
+            default:
+                // Default path if location doesn't match any of the predefined ones
+                path.getElements().clear();
+                path.getElements().add(new MoveTo(40, 20)); // Default starting point
+                path.getElements().add(new LineTo(370, 20)); // Example default path
+                break;
+        }
+        
+        // Set the path and start the drone movement
+        pathTransition.setPath(path);
+        pathTransition.play();
+    }}
