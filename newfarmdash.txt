@@ -212,3 +212,6 @@ public class mainController implements Initializable {
         pathTransition.setPath(path);
         pathTransition.play();
     }}
+
+
+project
